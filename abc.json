@@ -1,1 +1,21 @@
-{"dono":"976687"}
+{
+  "STODO_NO": 5297697678,
+  "VENDOR": 14250,
+  "VENDOR_NAME": "SUPERSONIC",
+  "ITEMS": [ {
+          "item_no":"00001",
+        "mat_no": "00000000034141",
+        "item_qty" : "43"
+        } , 
+  {
+          "item_no":"00002",
+        "mat_no": "00000000034141",
+        "item_qty" : "32"
+        },
+    {
+          "item_no":"00003",
+        "mat_no": "00000000034141",
+        "item_qty" : "30"
+        }
+  ]
+}
