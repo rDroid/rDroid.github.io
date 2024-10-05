@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Scanner (Plain JS)</title>
+    <style>
+        video, canvas {
+            display: block;
+            margin: 10px auto;
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+    <h1>QR Code Scanner (Plain JS / jQuery)</h1>
+
+    <!-- Video Element to Scan QR Code -->
+    <h3>Scan QR Code from Camera:</h3>
+    <video id="video" width="400" height="400"></video>
+    <p id="cameraResult"></p>
+    <button id="startCamera">Start Camera</button>
+    <button id="stopCamera">Stop Camera</button>
+
+    <!-- Input to Upload QR Code Photo -->
+    <h3>Upload a QR Code Image:</h3>
+    <input type="file" id="imageInput" accept="image/*">
+    <p id="uploadResult"></p>
+
+    <!-- ZXing Library CDN -->
+    <script src="https://unpkg.com/@zxing/library@latest"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            // Initialize QR code reader
+            const codeReader = new ZXing.BrowserQRCodeReader();
+            let stream;
+
+            // Start the camera scanning
+            $('#startCamera').click(function () {
+                const constraints = {
+                    video: {
+                        facingMode: "environment",  // Use back camera for better focus
+                        width: { ideal: 1280 },     // High resolution
+                        height: { ideal: 720 }
+                    }
+                };
+
+                navigator.mediaDevices.getUserMedia(constraints).then(function (localStream) {
+                    stream = localStream;
+                    $('#video')[0].srcObject = stream;
+                    $('#video')[0].play();
+                    
+                    // Start scanning from the camera
+                    codeReader.decodeFromVideoDevice(null, 'video', (result, err) => {
+                        if (result) {
+                            $('#cameraResult').text('Camera Scanned QR: ' + result.text);
+                        }
+                        if (err && !(err instanceof ZXing.NotFoundException)) {
+                            console.error(err);
+                        }
+                    });
+                }).catch(function (err) {
+                    console.error('Error accessing camera: ', err);
+                });
+            });
+
+            // Stop the camera stream
+            $('#stopCamera').click(function () {
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    $('#video')[0].pause();
+                    $('#cameraResult').text('Camera stopped.');
+                }
+            });
+
+            // Upload image and decode QR code
+            $('#imageInput').change(function (event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function () {
+                        const img = new Image();
+                        img.src = reader.result;
+                        img.onload = function () {
+                            codeReader.decodeFromImage(img).then(function (result) {
+                                $('#uploadResult').text('Uploaded Image QR: ' + result.text);
+                            }).catch(function (err) {
+                                $('#uploadResult').text('Error decoding QR code from the uploaded image.');
+                                console.error(err);
+                            });
+                        };
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
