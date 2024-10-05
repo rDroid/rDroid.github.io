@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Scanner</title>
+    <script src="https://unpkg.com/html5-qrcode/html5-qrcode.min.js"></script>
+    <style>
+        #qrReader {
+            width: 100%;
+            max-width: 500px;
+            margin: auto;
+            display: none; /* Initially hidden */
+        }
+        #qrResult {
+            margin-top: 20px;
+            font-size: 18px;
+            color: #333;
+        }
+        #btnStart ,#btnStop{
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center;">QR Code Scanner</h1>
+    <button id="btnStart">Start QR Code Scan</button>
+    <button id="btnStop">Stop QR Code Scan</button>
+
+     
+    <div id="qrReader"></div>
+
+     
+    <div id="qrResult">No QR code detected yet.</div>
+
+    <script>
+        let qr;
+        document.getElementById('btnStart').addEventListener('click', function() {
+             
+            document.getElementById('qrReader').style.display = "block";
+
+             
+            qr = new Html5Qrcode("qrReader");
+
+             
+            qr.start(
+                { facingMode: "environment" },   
+                {
+                    fps: 10,     
+                    qrbox: { width: 250, height: 250 }   
+                },
+                ScanSuccess,   
+                ScanFailure   
+            ).catch(err => {
+                console.error(`Unable to start scanning: ${err}`);
+            });
+        });
+
+         
+        function ScanSuccess(decodedText, decodedResult) {
+             
+            document.getElementById('qrResult').innerText = `QR Code detected: ${decodedText}`;
+
+             
+            qr.stop().then(ignore => {
+                document.getElementById('qrReader').style.display = "none";
+            }).catch(err => {
+                console.error(`Failed to stop scanning: ${err}`);
+            });
+        }
+
+        function ScanFailure(error) {
+            //console.warn(`QR Code scan failed: ${error}`);
+        }
+        document.getElementById("btnStop").addEventListener("click", function() {
+            qr.stop().then(() => {
+                console.log("QR Code scanning stopped.");
+            }).catch(err => {
+                console.error(`Error stopping the scanner: ${err}`);
+            });
+        });
+    </script>
+</body>
+</html>
