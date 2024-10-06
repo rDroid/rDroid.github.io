@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Code Scanner with Full Screen and Retry2</title>
+    <title>QR Code Scanner with Full Screen and Retry</title>
     <style>
         /* Fullscreen container for the video */
         #scannerContainer {
@@ -87,4 +87,44 @@
 
             function stopScanner() {
                 // Stop the stream and reset everything
-    
+                if (video.srcObject) {
+                    video.srcObject.getTracks().forEach(track => track.stop());
+                }
+                video.srcObject = null;
+                scannerContainer.style.display = 'none';
+                codeReader.reset();
+            }
+
+            document.getElementById('stopScanner').addEventListener('click', stopScanner);
+
+            // Start the scanner
+            scannerContainer.style.display = 'flex';
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                .then(stream => {
+                    video.srcObject = stream;
+                    video.play();
+                    progress.textContent = 'Align QR Code within the box';
+
+                    codeReader.decodeFromVideoDevice(null, 'video', (result, err) => {
+                        if (result) {
+                            progress.textContent = 'QR Code Scanned: ' + result.text;
+                            stopScanner();
+                        } else if (err) {
+                            if (retryCount < maxRetries) {
+                                retryCount++;
+                                progress.textContent = `Retrying... (${retryCount}/${maxRetries})`;
+                            } else {
+                                progress.textContent = 'Unable to scan. Please adjust the QR code and try again.';
+                                stopScanner();
+                            }
+                        }
+                    });
+                })
+                .catch(err => {
+                    progress.textContent = 'Error accessing the camera: ' + err.message;
+                    stopScanner();
+                });
+        });
+    </script>
+</body>
+</html>
