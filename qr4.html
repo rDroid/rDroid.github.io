@@ -83,7 +83,7 @@
     </style>
 </head>
 <body>
-    <div id="controls">
+    <div id="controls"> QRR
         <button id="startScanner">Start Full-Screen QR Scanner</button>
         <button id="captureImage">Capture QR Code Image</button>
         <input type="file" id="uploadImage" accept="image/*">
@@ -132,7 +132,7 @@
             scannerContainer.style.display = 'flex';
             progress.textContent = 'Align QR Code within the box';
 
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: 'environment' } } }) // Use the back camera
                 .then(stream => {
                     video.srcObject = stream;
                     video.play();
@@ -160,19 +160,27 @@
 
         // Capture QR Code Image from Camera
         document.getElementById('captureImage').addEventListener('click', function () {
-            navigator.mediaDevices.getUserMedia({ video: true })
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: 'environment' } } }) // Use the back camera
                 .then(stream => {
                     const captureVideo = document.createElement('video');
                     captureVideo.srcObject = stream;
                     captureVideo.play();
-                    setTimeout(() => {
+
+                    // Add a manual capture button to take the snapshot after aligning the QR code
+                    const captureBtn = document.createElement('button');
+                    captureBtn.textContent = "Snap Photo";
+                    captureBtn.style = "position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); z-index: 1004; padding: 10px 20px; background-color: lime; color: white; font-size: 16px;";
+                    document.body.appendChild(captureBtn);
+
+                    captureBtn.addEventListener('click', () => {
                         qrCanvas.width = captureVideo.videoWidth;
                         qrCanvas.height = captureVideo.videoHeight;
                         qrCtx.drawImage(captureVideo, 0, 0, qrCanvas.width, qrCanvas.height);
                         imagePreview.src = qrCanvas.toDataURL(); // Show the captured image
                         decodeQRFromImage(qrCanvas);
                         stream.getTracks().forEach(track => track.stop());
-                    }, 1000); // Wait 1 second to allow the video stream to start
+                        document.body.removeChild(captureBtn); // Remove the capture button after snapping
+                    });
                 })
                 .catch(err => {
                     alert('Error accessing the camera: ' + err.message);
