@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimized QR Code Scanner</title>
+    <style>
+        /* Fullscreen container for the video */
+        #scannerContainer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+            display: none; /* Initially hidden */
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        /* Style for the video to take full screen */
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Guide lines to help align QR code */
+        .guidelines {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            border: 2px solid lime;
+            top: calc(50% - 150px);
+            left: calc(50% - 150px);
+            box-sizing: border-box;
+            z-index: 1001;
+        }
+
+        /* Progress Indicator */
+        #progress {
+            position: absolute;
+            top: 20px;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-size: 18px;
+            z-index: 1002;
+        }
+
+        /* Buttons for starting/stopping scanner */
+        #controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1003;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>QR Code Scanner with Dynamic FPS and Retry</h1>
+
+    <button id="startScanner">Start Full-Screen Scanner</button>
+    <button id="uploadQR">Upload QR Code Image</button>
+    <input type="file" id="imageInput" accept="image/*" style="display: none;">
+    <p id="uploadResult"></p>
+
+    <!-- Full-screen scanner container -->
+    <div id="scannerContainer">
+        <!-- Video element for the camera -->
+        <video id="video"></video>
+        
+        <!-- Guidelines to help align QR code -->
+        <div class="guidelines"></div>
+
+        <!-- Progress indicator -->
+        <div id="progress">Scanning...</div>
+
+        <!-- Controls -->
+        <div id="controls">
+            <button id="stopScanner">Stop Scanner</button>
+        </div>
+    </div>
+
+    <!-- ZXing Library from CDN -->
+    <script src="https://unpkg.com/@zxing/library@latest"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            // Initialize QR code reader
+            const codeReader = new ZXing.BrowserQRCodeReader();
+            let stream;
+            let fpsOptions = [30, 15, 10, 5]; // Frame rate options to try
+            let currentFPSIndex = 0; // Start with the first FPS option
+            let tryHarder = false; // "Try Harder" mode for ZXing scanning
+            let retryCount = 0;
+            const maxRetries = 5; // Limit the number of retries with dynamic settings
+
+            // Function to start full-screen camera scanning
+            $('#startScanner').click(function () {
+                $('#scannerContainer').show();
+                startScanner(fpsOptions[currentFPSIndex], tryHarder);
+            });
+
+            // Function to start scanner with dynamic fps and retry logic
+            function startScanner(fps, tryHarder) {
+                const constraints = {
+                    video: {
+                        facingMode: "environment",  // Use back camera for better focus
+                        frameRate: { ideal: fps },   // Dynamic frame rate
+                        width: { ideal: 1280 },     // High resolution
+                        height: { ideal: 720 }
+                    }
+                };
+
+                navigator.mediaDevices.getUserMedia(constraints).then(function (localStream) {
+                    stream = localStream;
+                    $('#video')[0].srcObject = stream;
+                    $('#video')[0].play();
+                    
+                    // Start scanning from the camera with progress indication
+                    codeReader.decodeFromVideoDevice(null, 'video', (result, err) => {
+                        if (result) {
+                            $('#progress').text('QR Code: ' + result.text);
+                            stopScanner();
+                        }
+                        if (err) {
+                            if (err instanceof ZXing.NotFoundException) {
+                                // Try different configurations if scan fails
+                                retryScan();
+                            } else {
+                                console.error(err);
+                            }
+                        }
+                    });
+                }).catch(function (err) {
+                    console.error('Error accessing camera: ', err);
+                });
+            }
+
+            // Retry scanning with different settings (lower FPS or "Try Harder" mode)
+            function retryScan() {
+                retryCount++;
+                if (retryCount <= maxRetries) {
+                    $('#progress').text('Retrying... (Attempt ' + retryCount + ')');
+                    
+                    // Try lower FPS or switch to "Try Harder" mode
+                    if (currentFPSIndex < fpsOptions.length - 1) {
+                        currentFPSIndex++;
+                    } else {
+                        currentFPSIndex = 0;
+                        tryHarder = !tryHarder;
+                    }
+                    
+                    // Restart the scanner with new configuration
+                    stopScanner();
+                    startScanner(fpsOptions[currentFPSIndex], tryHarder);
+                } else {
+                    $('#progress').text('Unable to scan. Please adjust the QR code and try again.');
+                }
+            }
+
+            // Function to stop the camera stream and exit full screen
+            function stopScanner() {
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    $('#video')[0].pause();
+                }
+                $('#scannerContainer').hide();
+            }
+
+            // Stop the scanner when the button is clicked
+            $('#stopScanner').click(function () {
+                stopScanner();
+            });
+
+            // Upload image and decode QR code
+            $('#uploadQR').click(function () {
+                $('#imageInput').click();
+            });
+
+            $('#imageInput').change(function (event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function () {
+                        const img = new Image();
+                        img.src = reader.result;
+                        img.onload = function () {
+                            codeReader.decodeFromImage(img).then(function (result) {
+                                $('#uploadResult').text('Uploaded Image QR: ' + result.text);
+                            }).catch(function (err) {
+                                $('#uploadResult').text('Error decoding QR code from the uploaded image.');
+                                console.error(err);
+                            });
+                        };
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
