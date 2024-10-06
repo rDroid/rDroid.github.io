@@ -80,10 +80,22 @@
             max-height: 400px;
             margin: 20px 0;
         }
+
+        #captureVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none;
+        }
+
+        /* Hide QR Canvas */
+        #qrCanvas {
+            display: none;
+        }
     </style>
 </head>
 <body>
-    <div id="controls"> QRR
+    <div id="controls">
         <button id="startScanner">Start Full-Screen QR Scanner</button>
         <button id="captureImage">Capture QR Code Image</button>
         <input type="file" id="uploadImage" accept="image/*">
@@ -96,7 +108,8 @@
         <button id="stopScanner">Stop Scanner</button>
     </div>
 
-    <canvas id="qrCanvas" style="display: none;"></canvas>
+    <video id="captureVideo" autoplay></video>
+    <canvas id="qrCanvas"></canvas>
     <img id="imagePreview" alt="Image Preview">
 
     <!-- ZXing Library -->
@@ -105,6 +118,7 @@
     <script>
         const codeReader = new ZXing.BrowserQRCodeReader();
         const video = document.getElementById('video');
+        const captureVideo = document.getElementById('captureVideo');
         const scannerContainer = document.getElementById('scannerContainer');
         const progress = document.getElementById('progress');
         const qrCanvas = document.getElementById('qrCanvas');
@@ -160,9 +174,9 @@
 
         // Capture QR Code Image from Camera
         document.getElementById('captureImage').addEventListener('click', function () {
+            captureVideo.style.display = 'block'; // Show camera preview
             navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: 'environment' } } }) // Use the back camera
                 .then(stream => {
-                    const captureVideo = document.createElement('video');
                     captureVideo.srcObject = stream;
                     captureVideo.play();
 
@@ -179,6 +193,7 @@
                         imagePreview.src = qrCanvas.toDataURL(); // Show the captured image
                         decodeQRFromImage(qrCanvas);
                         stream.getTracks().forEach(track => track.stop());
+                        captureVideo.style.display = 'none'; // Hide camera preview
                         document.body.removeChild(captureBtn); // Remove the capture button after snapping
                     });
                 })
