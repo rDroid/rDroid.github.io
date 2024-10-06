@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Code Scanner with Full Screen and Retry</title>
+    <title>QR Code Scanner with Capture and Upload</title>
     <style>
         /* Fullscreen container for the video */
         #scannerContainer {
@@ -62,10 +62,33 @@
             border: none;
             cursor: pointer;
         }
+
+        /* Capture and Upload buttons */
+        #controls {
+            margin: 20px;
+        }
+
+        #captureImage, #uploadImage {
+            margin-right: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+
+        /* Image preview for captured/uploaded images */
+        #imagePreview {
+            max-width: 100%;
+            max-height: 400px;
+            margin: 20px 0;
+        }
     </style>
 </head>
 <body>
-    <button id="startScanner">Start Full-Screen QR Scanner2</button>
+    <div id="controls">
+        <button id="startScanner">Start Full-Screen QR Scanner</button>
+        <button id="captureImage">Capture QR Code Image</button>
+        <input type="file" id="uploadImage" accept="image/*">
+    </div>
+
     <div id="scannerContainer">
         <video id="video"></video>
         <div class="guidelines"></div>
@@ -73,37 +96,46 @@
         <button id="stopScanner">Stop Scanner</button>
     </div>
 
+    <canvas id="qrCanvas" style="display: none;"></canvas>
+    <img id="imagePreview" alt="Image Preview">
+
     <!-- ZXing Library -->
     <script src="https://unpkg.com/@zxing/library@latest"></script>
 
     <script>
-        document.getElementById('startScanner').addEventListener('click', function () {
-            const codeReader = new ZXing.BrowserQRCodeReader();
-            const video = document.getElementById('video');
-            const scannerContainer = document.getElementById('scannerContainer');
-            const progress = document.getElementById('progress');
-            let retryCount = 0;
-            const maxRetries = 5;
+        const codeReader = new ZXing.BrowserQRCodeReader();
+        const video = document.getElementById('video');
+        const scannerContainer = document.getElementById('scannerContainer');
+        const progress = document.getElementById('progress');
+        const qrCanvas = document.getElementById('qrCanvas');
+        const qrCtx = qrCanvas.getContext('2d');
+        const imagePreview = document.getElementById('imagePreview');
+        let retryCount = 0;
+        const maxRetries = 5;
 
-            function stopScanner() {
-                // Stop the stream and reset everything
-                if (video.srcObject) {
-                    video.srcObject.getTracks().forEach(track => track.stop());
-                }
-                video.srcObject = null;
-                scannerContainer.style.display = 'none';
-                codeReader.reset();
+        // Function to stop the scanner
+        function stopScanner() {
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
             }
+            video.srcObject = null;
+            scannerContainer.style.display = 'none';
+            codeReader.reset();
+        }
 
-            document.getElementById('stopScanner').addEventListener('click', stopScanner);
+        // Event listener for Stop Scanner button
+        document.getElementById('stopScanner').addEventListener('click', stopScanner);
 
-            // Start the scanner
+        // Start Full-Screen QR Scanner
+        document.getElementById('startScanner').addEventListener('click', function () {
+            retryCount = 0; // Reset retry count
             scannerContainer.style.display = 'flex';
+            progress.textContent = 'Align QR Code within the box';
+
             navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
                 .then(stream => {
                     video.srcObject = stream;
                     video.play();
-                    progress.textContent = 'Align QR Code within the box';
 
                     codeReader.decodeFromVideoDevice(null, 'video', (result, err) => {
                         if (result) {
@@ -125,6 +157,59 @@
                     stopScanner();
                 });
         });
+
+        // Capture QR Code Image from Camera
+        document.getElementById('captureImage').addEventListener('click', function () {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    const captureVideo = document.createElement('video');
+                    captureVideo.srcObject = stream;
+                    captureVideo.play();
+                    setTimeout(() => {
+                        qrCanvas.width = captureVideo.videoWidth;
+                        qrCanvas.height = captureVideo.videoHeight;
+                        qrCtx.drawImage(captureVideo, 0, 0, qrCanvas.width, qrCanvas.height);
+                        imagePreview.src = qrCanvas.toDataURL(); // Show the captured image
+                        decodeQRFromImage(qrCanvas);
+                        stream.getTracks().forEach(track => track.stop());
+                    }, 1000); // Wait 1 second to allow the video stream to start
+                })
+                .catch(err => {
+                    alert('Error accessing the camera: ' + err.message);
+                });
+        });
+
+        // Upload and Decode QR Code Image
+        document.getElementById('uploadImage').addEventListener('change', function (event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const img = new Image();
+                    img.onload = function () {
+                        qrCanvas.width = img.width;
+                        qrCanvas.height = img.height;
+                        qrCtx.drawImage(img, 0, 0);
+                        imagePreview.src = img.src; // Show the uploaded image
+                        decodeQRFromImage(qrCanvas);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Function to decode QR code from an image (canvas)
+        function decodeQRFromImage(canvas) {
+            const imageData = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
+            codeReader.decodeFromImageData(imageData)
+                .then(result => {
+                    alert('QR Code Decoded: ' + result.text);
+                })
+                .catch(err => {
+                    alert('Error decoding QR Code: ' + err.message);
+                });
+        }
     </script>
 </body>
 </html>
