@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Full-Screen QR Code Scanner</title>
+    <title>QR Code Scanner</title>
     <script src="https://unpkg.com/@zxing/browser@latest"></script>
     <style>
         body, html {
@@ -13,87 +13,84 @@
             height: 100%;
             display: flex;
             flex-direction: column;
+            justify-content: space-between;
             align-items: center;
-            justify-content: center;
             background-color: black;
         }
         video {
             width: 100%;
-            height: 100%;
+            height: auto;
+            max-height: 70%;
             object-fit: cover;
-            position: absolute;
-            top: 0;
-            left: 0;
+            display: none;
             z-index: 1;
         }
         .guidelines {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 2;
-        }
-        .guidelines::before, .guidelines::after {
-            content: '';
-            position: absolute;
-            border: 2px solid #00ff00;
-            z-index: 2;
-        }
-        .guidelines::before {
+            top: 50%;
+            left: 50%;
             width: 60%;
-            height: 60%;
+            height: 40%;
+            transform: translate(-50%, -50%);
+            border: 3px solid #00ff00;
             box-sizing: border-box;
-        }
-        .guidelines::after {
-            width: 15px;
-            height: 15px;
-            background-color: #00ff00;
-        }
-        #scanning-animation {
-            position: absolute;
-            top: 0;
-            width: 100%;
-            height: 3px;
-            background-color: #00ff00;
-            z-index: 3;
-            animation: scanning 2s infinite;
-        }
-        @keyframes scanning {
-            from {
-                transform: translateY(0);
-            }
-            to {
-                transform: translateY(100%);
-            }
+            z-index: 2;
+            display: none;
         }
         #result {
-            position: absolute;
-            bottom: 20px;
             color: white;
-            font-size: 20px;
+            font-size: 18px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 20px;
+            z-index: 3;
+        }
+        .controls button {
+            background-color: #00ff00;
+            color: black;
+            border: none;
+            padding: 10px 20px;
+            font-size: 18px;
             font-weight: bold;
-            z-index: 4;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .controls button:hover {
+            background-color: #008000;
+        }
+        .controls button:disabled {
+            background-color: gray;
+            cursor: not-allowed;
         }
     </style>
 </head>
 <body>
+    <div id="result">Click "Start Scan" to begin</div>
     <video id="preview"></video>
     <div class="guidelines"></div>
-    <div id="scanning-animation"></div>
-    <div id="result">Align QR code within the box...</div>
+    <div class="controls">
+        <button id="start-btn">Start Scan</button>
+        <button id="stop-btn" disabled>Stop Scan</button>
+    </div>
 
     <script>
         const codeReader = new ZXing.BrowserQRCodeReader();
         const videoElement = document.getElementById('preview');
         const resultElement = document.getElementById('result');
-        let scanning = true;
+        const startButton = document.getElementById('start-btn');
+        const stopButton = document.getElementById('stop-btn');
+        const guidelines = document.querySelector('.guidelines');
+        let scanning = false;
 
         async function startScanner() {
             try {
+                // Get list of available cameras
                 const devices = await codeReader.listVideoInputDevices();
                 if (devices.length === 0) {
                     resultElement.textContent = 'No camera found!';
@@ -106,14 +103,20 @@
                 // Start scanning
                 await codeReader.decodeFromVideoDevice(selectedDeviceId, videoElement, (result, error) => {
                     if (result && scanning) {
-                        scanning = false;
+                        scanning = false; // Stop further scanning
                         resultElement.textContent = `Result: ${result.text}`;
-                        stopScanner();
+                        stopScanner(); // Stop the camera
                     } else if (error) {
-                        console.log(error);
+                        console.warn('Scanning error:', error);
                     }
                 });
 
+                // Update UI for active scanning
+                videoElement.style.display = 'block';
+                guidelines.style.display = 'block';
+                startButton.disabled = true;
+                stopButton.disabled = false;
+                scanning = true;
                 resultElement.textContent = 'Align QR code within the box...';
             } catch (error) {
                 console.error('Error initializing scanner:', error);
@@ -122,16 +125,21 @@
         }
 
         function stopScanner() {
-            codeReader.reset();
-            videoElement.srcObject?.getTracks().forEach(track => track.stop());
-            setTimeout(() => {
-                alert('Scanning completed!');
-                resultElement.textContent = 'Camera closed.';
-            }, 1000);
+            codeReader.reset(); // Reset the code reader
+            videoElement.srcObject?.getTracks().forEach(track => track.stop()); // Stop the camera
+
+            // Update UI for stopped scanning
+            videoElement.style.display = 'none';
+            guidelines.style.display = 'none';
+            startButton.disabled = false;
+            stopButton.disabled = true;
+            scanning = false;
+            resultElement.textContent = 'Scanner stopped.';
         }
 
-        // Start scanner on page load
-        window.addEventListener('load', startScanner);
+        // Event listeners for buttons
+        startButton.addEventListener('click', startScanner);
+        stopButton.addEventListener('click', stopScanner);
     </script>
 </body>
 </html>
