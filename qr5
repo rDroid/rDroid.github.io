@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Scanner</title>
+    <script src="https://unpkg.com/@zxing/browser@latest"></script>
+    <style>
+        video {
+            width: 100%;
+            max-width: 600px;
+            border: 2px solid black;
+        }
+        #result {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>QR Code Scanner</h1>
+    <video id="preview"></video>
+    <div id="result">Result: <span id="output">Scanning...</span></div>
+
+    <script>
+        const codeReader = new ZXing.BrowserQRCodeReader();
+        const videoElement = document.getElementById('preview');
+        const outputElement = document.getElementById('output');
+
+        async function startScanner() {
+            try {
+                const devices = await codeReader.listVideoInputDevices();
+                
+                if (devices.length === 0) {
+                    outputElement.textContent = 'No camera found!';
+                    return;
+                }
+
+                // Automatically choose the best camera (prefer rear-facing if available)
+                const selectedDeviceId = devices.find(device => device.label.toLowerCase().includes('back'))?.deviceId || devices[0].deviceId;
+
+                // Start scanning with selected camera
+                await codeReader.decodeFromVideoDevice(selectedDeviceId, videoElement, (result, error) => {
+                    if (result) {
+                        outputElement.textContent = result.text;
+                        codeReader.reset();
+                    } else if (error) {
+                        console.error(error);
+                    }
+                });
+
+                outputElement.textContent = 'Scanning...';
+            } catch (error) {
+                console.error('Error initializing QR code scanner:', error);
+                outputElement.textContent = 'Error initializing scanner!';
+            }
+        }
+
+        // Start the scanner when the page loads
+        window.addEventListener('load', startScanner);
+    </script>
+</body>
+</html>
