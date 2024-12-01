@@ -1,0 +1,104 @@
+<html >
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+<head>
+	
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+<style type="text/css">
+	body{
+	font-family: Calibri;
+	}
+	.bold{
+	font-weight:bold;
+	}
+	.col-md-6 {
+        
+        border: 1px solid #ececec;
+    }
+	.col-md-3, .col-md-4, .col-md-1 {        
+        border: 1px solid #ececec;
+    }
+	@media (min-width: 992px) {
+	.box{
+	    max-width: 800px;
+		margin: auto;
+	}
+    
+}
+</style>
+</head>
+	<body>
+		<button onclick="print();">Print</button>
+	<div class="container-fluid" id="printdiv">
+	<div class="box">
+<div class="row">	
+	<h3><b><center>PRINTER TEST/center></b></h3>
+	<h4><center>Weighment slip</center></h4>
+</div>
+<div class="row">
+	<div class="col-md-6 col-xs-6">TRANSPORTER:</div><div class="col-md-6 col-xs-6 bold">CJDARCL Logistics Ltd.</div></div>
+	<div class="row"><div class="col-md-6 col-xs-6">DRIVER NAME:</div><div class="col-md-6 col-xs-6 bold">JOHN DOE</div></div>
+	<div class="row"><div class="col-md-6 col-xs-6">Vehicle No.:</div><div class="col-md-6 col-xs-6 bold">JA783PM897639</div></div>
+	<div class="row"><div class="col-md-6 col-xs-6">Material:</div><div class="col-md-6 col-xs-6 bold">BOXES</div></div>
+	<div class="row"><div class="col-md-6 col-xs-6">PERMIT:</div><div class="col-md-6  col-xs-6 bold">938276382</div></div>
+	<div class="row"><div class="col-md-6 col-xs-6">GE NO:</div><div class="col-md-6 col-xs-6 bold">9999999871</div>
+	</div>
+	<div class="row">
+	<div class="col-md-6 col-xs-6">SOURCE WEIGHT(MT.)</div><div class="col-md-6 col-xs-6"><span class="bold">33.140</span></div>
+	</div><div class="row">
+	<div class="col-md-3 col-xs-6">GROSS WEIGHT:</div><div class="col-md-1 col-xs-6 bold">47.500</div><div class="col-md-3 col-xs-6">TARE WEIGHT:</div><div class="col-md-1 col-xs-6 bold">14.360</div>
+	<div class="col-md-3 col-xs-6">NET WEIGHT: </div><div class="col-md-1 col-xs-6 bold">33.140</div>
+	</div><div class="row">
+	
+	<div class="col-md-3 col-xs-6">REC GROSS WEIGHT:</div><div class="col-md-1 col-xs-6 bold">47.460</div>	<div class="col-md-3 col-xs-6">TSM TARE WEIGHT:</div><div class="col-md-1 col-xs-6 bold">14.520</div>
+	<div class="col-md-3 col-xs-6">REC NET WEIGHT:</div><div class="col-md-1 col-xs-6 bold">33.080</div>
+	</div>
+	<div class="row">
+	<div class="col-md-6 col-xs-6">RECEIVED QTY (MT):</div><div><div class="col-md-6 col-xs-6"><span class="bold">33.080</span></div>	
+	</div></div>
+	<div class="row">
+	<div class="col-md-6 col-xs-6 bold">EXITED BY JANE DOE:</div>
+	<div class="col-md-6 col-xs-6 bold">04-OCT-2024 01:53:33 P.M.</div>
+	</div>
+	</div>
+
+	</body>
+
+	<script type="text/javascript"> 
+	function print(){
+
+// Check if Web Bluetooth API is available
+if ('bluetooth' in navigator) {
+  // Discover and connect to the Bluetooth printer
+  navigator.bluetooth.requestDevice({ filters: [{ services: ['print'] }] })
+    .then(device => device.gatt.connect())
+    .then(server => {
+      // Retrieve the HTML content to be printed
+      //fetch('your-html-page-url')
+      //  .then(response => response.text())
+      //  .then(htmlContent => {
+          // Create a new window or iframe for printing
+		  var htmlContent=document.getElementById("printdiv").innerHTML;
+          const printWindow = window.open('', '_blank');
+          printWindow.document.write(htmlContent);
+          printWindow.document.close();
+
+          // Print the content using the Bluetooth printer
+          printWindow.addEventListener('beforeprint', () => {
+            printWindow.print();
+        //  });
+        });
+    })
+    .catch(error => {
+      console.error('Error:', error);
+    });
+} else {
+  console.error('Web Bluetooth API is not supported.');
+}
+
+
+
+	}
+	
+	</script>
+</html>
+
